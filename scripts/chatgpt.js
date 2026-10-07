@@ -17,6 +17,7 @@ const chat = async (prompt, messages) => {
     const answer = completion.choices[0].message.content;
     return answer;
   } catch (error) {
+    let response;
     if (error.code === "insufficient_quota") {
       console.error("Error de cuota insuficiente:", error);
       response =
@@ -26,6 +27,7 @@ const chat = async (prompt, messages) => {
       response =
         "Lo siento, hubo un problema al procesar tu pregunta. Inténtalo de nuevo más tarde.";
     }
+    return response;
   }
 };
 

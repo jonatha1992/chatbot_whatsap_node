@@ -9,33 +9,44 @@ const BaileysProvider = require("@bot-whatsapp/provider/baileys");
 const MockAdapter = require("@bot-whatsapp/database/mock");
 const { chat } = require("./scripts/chatgroq");
 
-let conversationHistory = [];
+const userHistories = new Map();
+const MAX_HISTORY_MESSAGES = 20;
+
+function getUserHistory(userId) {
+  if (!userHistories.has(userId)) {
+    userHistories.set(userId, []);
+  }
+  return userHistories.get(userId);
+}
 
 const flowPrincipal = addKeyword([".*"]).addAction(
   async (ctx, { flowDynamic, endFlow }) => {
     const prompt =
       "Eres un asistente amable y útil que responde preguntas de manera concisa y mantiene la conversación.";
     const text = ctx.body;
+    const userId = ctx.from || "default";
 
-    // Añadir la pregunta actual al historial
-    conversationHistory.push({ role: "user", content: text });
+    const history = getUserHistory(userId);
 
-    // Limitar el historial a las últimas 10 interacciones para evitar tokens excesivos
-    if (conversationHistory.length > 20) {
-      conversationHistory = conversationHistory.slice(-20);
+    // Añadir la pregunta actual al historial del usuario
+    history.push({ role: "user", content: text });
+
+    // Limitar el historial por usuario para evitar tokens excesivos
+    if (history.length > MAX_HISTORY_MESSAGES) {
+      userHistories.set(userId, history.slice(-MAX_HISTORY_MESSAGES));
     }
 
     let response;
     try {
-      response = await chat(prompt, conversationHistory);
+      response = await chat(prompt, userHistories.get(userId));
     } catch (error) {
       console.error("Error al generar respuesta con Groq:", error);
       response =
         "Lo siento, hubo un problema al procesar tu pregunta. Inténtalo de nuevo más tarde.";
     }
 
-    // Añadir la respuesta al historial
-    conversationHistory.push({ role: "assistant", content: response });
+    // Añadir la respuesta al historial del usuario
+    userHistories.get(userId).push({ role: "assistant", content: response });
 
     await flowDynamic(response);
   }
