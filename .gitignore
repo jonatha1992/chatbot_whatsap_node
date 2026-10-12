@@ -5,3 +5,7 @@ core.class.log
 queue.class.log
 baileys.log
 bot.qr.png
+
+# Allow VS Code run/debug configs to be committed
+!.vscode/launch.json
+!.vscode/tasks.json
